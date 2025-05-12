@@ -52,13 +52,8 @@ Mkfile.old
 dkms.conf
 
 
-# C++ ignores
-cpp/build/
-*.o
-*.out
-
 # Rust ignores
-rust/target/
+/target
 Cargo.lock
 
 # Python ignores
