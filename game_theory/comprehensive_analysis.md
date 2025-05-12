@@ -4,29 +4,84 @@
 
 This document presents an exhaustive game-theoretic analysis of a novel dice game involving bit manipulation on a 12-bit board, with multiple scoring rounds. The game combines elements of chance (dice rolls) with strategic decision-making, creating a complex environment for player interaction. We analyze the game's structure, strategic considerations, and probabilistic elements to determine optimal play strategies and potential equilibria.
 
+// photo of the box of game // ..\"the game ref"\20240901_092748.jpg
+
+// photo of the game // ..\"the game ref"\20240901_095152.jpg
+
 ## 2. Game Description
+
+// photo of the rules // ..\"the game ref"\20240901_092915.jpg
 
 ### 2.1 Base Game Rules
 
 1. The game is played on a 12-bit board, initially set to all 1s (0xFFF in hexadecimal).
-2. Two players take turns rolling two six-sided dice and summing the result (2-12).
+2. Two players take turns by first rolling two dice and then flipping the avaliable numbers as long as they can
+Player turn:
+ Throw two dice and sum them up (2-12)
+ then:
 3. On their turn, a player must flip (from 1 to 0) either:
-   a) The bit corresponding to the dice sum, or
-   b) A combination of bits that sum to the dice roll.
+   - a) The bit corresponding to the dice sum, or
+   - b)  A combination of bits that sum to the dice roll.
 4. A player's turn continues until no valid move is possible.
 5. When a player can no longer make a move, their score for the round is the sum of the remaining 1-bits.
 6. The board is reset to all 1s, and the other player begins their round.
 7. This process is repeated for a total of 5 rounds for each player.
 8. The player with the lower total score across all 5 rounds wins.
 
+**Summary**  
+Players alternate turns rolling dice sums (2-12), flipping bits or combinations to minimize their score (remaining 1-bits). Duplicate sums are resolved through subset divisions using a greedy algorithm prioritizing higher values.
+
+#### Summary
+In this verison we basicly can just roll 2 dice 5 times writing the sum of each throw
+After getting the total 5 numbers we add them up and the person with higher number wins
+
+The only valid difficulty is that we can go out of the lover numbers when we roll the same number twice we shouldnt divide it to the valid sum of numbers (2 to 12) as we can use numbers from 2 to 12
+
+The total solution for scoring is:
+For unique numbers write down number
+For repeating numbers try to divide them so that all numbers are unique 
+
+eg 
+
+| player | thrown sum | to unique | total |
+---
+| A      | 8, 7, 7, 5, 4  | 8, 7, 5, 4, 6, 1   | 31 |
+| B      | 10, 3, 5, 2, 5 | 10, 5, 3, 2, 4, 1 | 25 |
+---
+
+
+The solution to the division problem isnt hard we can just use  simple greedy alhoritm based going from highest numbers but with restrain of uniqness
+Even if we wouldnt know all of the numbers from the start the problem is quite easy to solve and the game just shows basic principles of the propablity
+
 ### 2.2 Extended Game Rules
+This is where things get more exciting
 
 1. The initial setup is identical to the base game.
-2. Player A aims to turn all bits to 0, while Player B aims to return all bits to 1.
-3. Players alternate turns, following the same movement rules as the base game.
+2. Players alternate objectives: Player A clears bits (1→0), Player B sets bits (0→1)  
+3. Players turn the avaliable for them bits by either changing the number or a subset
 4. The game ends when either all bits are 0 (Player A wins) or all bits are 1 (Player B wins).
 
+#### Summary 
+In here we see that the second player at the begging have advantage as all of the numbers are flipped to their favor besides the ones the first player unflipped
+
+Theoreticly this is the moment where they have the highest chances of winning just by rolling the same number the previous player rolled in the first turn, and depending on number those chances will be higher or lower
+
+Number / chances
+12 1/36
+11 1/36
+10 2/36 etc..
+
+The problem is that as the player has less of the bits/figures to flip in their favour the chances of hitting that perfect number gets lower ususally with thehighest numbers (12, 11, 10, 9, 8) deciding in favour of one player (as the lover numbers are easly flipped by dividing other numbers into sum of multiple)
+
+So in fact (when considering possibilities of dividing numbers) the chances of flipping a number in a turn are
+not / 36 but more idk how much i think sth like 6! * 6!
+12 1/36 {12}
+11 2/36 {11 and 12=(11, 1)} 
+1 35/36 As any number: n besides 2 can be divided to 1 and n-1
+
+
 ## 3. Game-Theoretic Framework
+Becouse of the varring propability (And frustration expirienced playing it) we will soley focus on the extended version of the game
 
 ### 3.1 Game Structure
 
@@ -46,7 +101,6 @@ This document presents an exhaustive game-theoretic analysis of a novel dice gam
 ## 4. Probabilistic Analysis
 
 ### 4.1 Dice Roll Probabilities
-
 Let P(r) be the probability of rolling a sum r with two six-sided dice:
 
 | Sum (r) | Probability P(r) |
@@ -58,27 +112,26 @@ Let P(r) be the probability of rolling a sum r with two six-sided dice:
 | 6, 8    | 5/36 ≈ 0.1389    |
 | 7       | 6/36 ≈ 0.1667    |
 
-### 4.2 Expected Value of Bit Flips
+### 4.2 Effective Flip Probabilities  
+Considering subset decomposition strategies:  
 
-The expected value (EV) of flipping a bit b is:
+| Bit | Effective Probability | Key Combinations |  
+|-----|-----------------------|-------------------|  
+| 12  | 1/36                  | Direct only       |  
+| 11  | 3/36                  | 11, 12=11+1       |  
+| 10  | 6/36                  | 10, 11=10+1, 12=10+2 |  
+| 9   | 10/36                 | 9, 10=9+1, 11=9+2, 12=9+3 |  
+| 8   | 15/36                 | 8 + combinations up to 12 |  
+| 7   | 21/36                 | 7 + combinations up to 12 |  
+| 1   | 35/36                 | All sums ≥3 via 1+(r-1) |  
 
-EV(b) = b * P(b), for 2 ≤ b ≤ 12
-
-This yields:
-
-| Bit | Expected Value |
-|-----|----------------|
-| 7   | 1.1667         |
-| 8   | 1.1111         |
-| 6   | 0.8333         |
-| 9   | 1.0000         |
-| 5   | 0.5556         |
-| 10  | 0.8333         |
-| 4   | 0.3333         |
-| 11  | 0.6111         |
-| 3   | 0.1667         |
-| 12  | 0.3333         |
-| 2   | 0.0556         |
+### 4.3 Strategic Probability Values  
+| Bit | Survival Priority | Flip Vulnerability |  
+|-----|-------------------|--------------------|  
+| 12  | Highest           | 0.0278             |  
+| 11  | High              | 0.0833             |  
+| 7   | Medium            | 0.5833             |  
+| 1   | Lowest            | 0.9722             |  
 
 ## 5. Strategic Analysis
 
