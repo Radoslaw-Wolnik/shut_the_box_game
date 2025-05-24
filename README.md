@@ -1,141 +1,114 @@
-# Dice Game Analysis Project
+# Game Simulation Project
 
-This project provides a comprehensive framework for analyzing a dice-based board game through simulation, strategy evaluation, and performance optimization. It includes implementations in both C++ and Rust, along with Python scripts for visualization and a web interface.
-
-## Table of Contents
-
-1. [Project Structure](#project-structure)
-2. [Game Rules](#game-rules)
-3. [Implementations](#implementations)
-4. [Building and Running](#building-and-running)
-5. [Strategies](#strategies)
-6. [Simulation](#simulation)
-7. [Machine Learning](#machine-learning)
-8. [Python Scripts](#python-scripts)
-9. [Web Interface](#web-interface)
-10. [Contributing](#contributing)
-11. [License](#license)
-
-## Project Structure
-
-```
-dice-game-analysis/
-├── cpp/
-│   ├── src/
-│   ├── include/
-│   ├── ml/
-│   ├── simulation/
-│   └── CMakeLists.txt
-├── rust/
-│   ├── src/
-│   └── Cargo.toml
-├── python/
-│   ├── cli.py
-│   ├── app.py
-│   ├── tournament.py
-│   └── visualizations.py
-├── common/
-│   └── strategy_interface.hpp
-├── templates/
-│   └── index.html
-├── requirements.txt
-└── README.md
-```
+This Rust project simulates a probability-based board game involving 12 levers and dice rolls. Players aim to minimize their score by strategically flipping levers down over 5 rounds.
 
 ## Game Rules
+- **Board**: 12 levers (numbered 1–12), initially all **up**.
+- **Rounds**: Each player completes 5 rounds. The lowest total score wins.
+- **Turn**:
+  1. Roll two 6-sided dice and sum the result.
+  2. Flip down lever(s) matching the dice sum:
+     - Single lever with the exact number, **or**
+     - Multiple levers whose numbers sum to the dice value.
+  3. Repeat until no valid moves remain.
+- **Scoring**: Sum of **unflipped** lever numbers after each round.
 
-The game is played on a 12-bit board with two variants:
+---
 
-1. **Base Game**: Players try to turn off as many bits as possible in 5 rounds. The player with the lower total score wins.
-2. **Extended Game**: One player tries to turn off all bits, while the other tries to turn them all on. The first to achieve their goal wins.
+## Implementation Overview
 
-## Implementations
+### Data Structures
+- **Board**: Represented as a 12-bit number (`u16`). Each bit corresponds to a lever (bit 0 = lever 1, ..., bit 11 = lever 12).  
+  - `1`: Lever is up.  
+  - `0`: Lever is down.  
+  - **Operations**: Bitwise AND/OR for flipping, O(1) time complexity.
 
-- C++: Provides high-performance simulations with various optimization levels.
-- Rust: Offers a clean, safe implementation with good performance.
-- Python: Used for visualization, web interface, and machine learning integration.
+### Time Complexity
+- **Precomputation**: O(1) (static combinations generated once at startup).  
+- **Per Turn**: O(1) (lever validity checks use precomputed combinations).  
+- **Per Round**: O(k), where `k` = number of turns until no moves remain (varies by dice rolls).  
+- **Per Simulation (5 rounds)**: ~5 × O(k).
 
-## Building and Running
+### Memory Usage
+- **Board**: 2 bytes (`u16`).  
+- **Precomputed Combinations**: ~200 entries (stored in a `HashMap<u8, Vec<Vec<u8>>>`).  
+- **Total per Simulation**: < 1 KB.
 
-### C++
+---
 
-```bash
-cd cpp
-mkdir build && cd build
-cmake ..
-make
-./dice_game_simulator
-```
+## In-Depth Implementation
 
-### Rust
+### File Structure
 
-```bash
-cd rust
-cargo run --release
-```
+| File                | Description                                                                 |
+|---------------------|-----------------------------------------------------------------------------|
+| **`board.rs`**      | `Board` struct with bitmask operations (`flip_down_multiple`, `sum_unflipped`). |
+| **`dice_throw.rs`** | Simulates rolling two 6-sided dice using `rand`.                           |
+| **`strategy.rs`**   | Precomputes valid lever combinations for all dice sums (2–12). Uses greedy selection (highest levers first). |
+| **`turn.rs`**       | Executes a single turn: rolls dice, selects levers to flip, updates board. |
+| **`round.rs`**      | Runs a full round until no moves remain, returns the unflipped sum.        |
+| **`simulation.rs`** | Simulates a full game (5 rounds) and calculates the total score.          |
+| **`main.rs`**       | Runs bulk simulations, aggregates results (avg, min, max), and prints metrics. |
 
-### Python
+---
 
-```bash
-pip install -r requirements.txt
-python python/cli.py
-```
+## Setup & Execution
 
-## Strategies
+### Prerequisites
+- Rust 1.60+ and Cargo ([Installation Guide](https://www.rust-lang.org/tools/install)).
 
-1. Random
-2. HighestValue
-3. HighestProbability
-4. BalancedValue
-5. Adaptive
-6. LookAhead
-7. ScoreManagement
-8. RiskAverse
-9. Aggressive
-10. PatternRecognition
+### Steps
+1. **Clone the Project**:
+   ```bash
+   git clone https://github.com/your-username/game-simulation.git
+   cd game-simulation
+   ```
 
-## Simulation
+2. **Build and Run**:
+   ```bash
+   cargo run --release
+   ```
 
-The project supports various simulation modes:
+3. **Run Tests**:
+   ```bash
+   cargo test
+   ```
 
-- Single-threaded
-- Multi-threaded
-- Distributed (using MPI)
+### Configuration
+- Adjust the number of simulations in `main.rs`:
+  ```rust
+  let num_simulations = 10_000; // Modify this value
+  ```
 
-To run a distributed simulation:
+---
 
-```bash
-mpirun -np 4 ./dice_game_simulator
-```
+## Strategy Design
 
-## Machine Learning
+### Greedy Algorithm
+1. **Precomputed Combinations**:
+    - All valid lever combinations for sums 2–12 are precomputed at startup.
+    - Combinations sorted by:
+        - Fewest levers (prioritize single-lever flips).
+        - Largest lever values (e.g., `[7]` > `[6, 1]`).
 
-The project includes a Deep Q-Network (DQN) agent for reinforcement learning:
+2. **Selection Logic**:
+    - For a dice sum, iterate through precomputed combinations in priority order.
+    - Choose the first combination where all levers are still **up**.
 
-```bash
-python python/train_dqn.py
-```
+### Example
+- **Dice Sum**: 7
+- **Priority Order**:
+    1. `[7]` (flip lever 7 if up).
+    2. `[6, 1]` (flip 6 and 1 if both up).
+    3. `[5, 2]`, etc.
 
-## Python Scripts
+### Efficiency
+- **Precomputation**: Done once using `lazy_static!` for fast lookup.
+- **No Runtime Calculations**: Immediate selection from sorted combinations.
 
-- `cli.py`: Command-line interface for running simulations
-- `tournament.py`: Runs a tournament between different strategies
-- `visualizations.py`: Creates visualizations of game states and strategy performance
+---
 
-## Web Interface
-
-A Flask-based web interface is provided for interactive gameplay and analysis:
-
-```bash
-python python/app.py
-```
-
-Then open a web browser and navigate to `http://localhost:5000`.
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+## Future Improvements
+- **Alternative Strategies**: Implement probabilistic or DFS-based approaches.
+- **Benchmarking**: Compare performance of bitmask vs. alternative data structures.
+- **Parallelization**: Use `rayon` to parallelize simulations.
