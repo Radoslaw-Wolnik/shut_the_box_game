@@ -1,61 +1,116 @@
+use crate::board::Board;
+use crate::strategy::BitFlipStrategy;
+use crate::strategy::greedy::GreedyStrategy;
 // use std::env;
-use crate::fire_spread::{MooreNeighborhood, VonNeumannNeighborhood};
 
-// Burn pattern options
 #[derive(Debug)]
-pub enum BurnPattern {
-    Moore(MooreNeighborhood),      // 8-directional
-    VonNeumann(VonNeumannNeighborhood), // 4-directional
+pub enum GameMode {
+    Normal,
+    Extended
+}
+
+pub enum PlayerStrategy {
+    Greedy(GreedyStrategy),
+    // Basic(BasicStrategy),
 }
 
 
+// Implement BitFlipStrategy for the configuration enum
+impl BitFlipStrategy for PlayerStrategy {
+    fn choose_levers_to_flip(&self, board: &Board, sum: u8) -> Option<Vec<u8>> {
+        match self {
+            Self::Greedy(s) => s.choose_levers_to_flip(board, sum),
+            // Self::Basic(s) => s.choose_levers_to_flip(board, sum),
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        match self {
+            PlayerStrategy::Greedy(s) => s.name()
+        }
+    }
+
+    fn description(&self) -> &'static str {
+        match self {
+            PlayerStrategy::Greedy(s) => s.description()
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum DiceMode {
+    Normal,
+    Weighted,
+}
+
 // Configuration structure
 pub struct Config {
-    pub size: usize,
-    pub density: f64,
+    pub game_mode: GameMode,
     pub simulations: usize,
-    pub burn_pattern: BurnPattern,
-    pub display_grid: bool,
-    pub frame_delay_ms: u64,
+    pub output_file: Option<String>, // correct type for Some<String> // the file name - without the extension
+    pub strategy_player_a: PlayerStrategy,
+    pub strategy_player_b: PlayerStrategy,
+    pub dice_mode: DiceMode,
+    pub parallelization: bool,
 }
 
 impl Config {
     pub fn new(args: &[String]) -> Result<Self, String> {
         let mut config = Config {
-            size: 20,
-            density: 0.6,
-            simulations: 1,
-            burn_pattern: BurnPattern::Moore(MooreNeighborhood),
-            display_grid: true,
-            frame_delay_ms: 50,
+            game_mode: GameMode::Normal,
+            simulations: 100,
+            output_file: None,
+            strategy_player_a: PlayerStrategy::Greedy(GreedyStrategy),
+            strategy_player_b: PlayerStrategy::Greedy(GreedyStrategy),
+            dice_mode: DiceMode::Normal,
+            parallelization: false,
         };
 
         let mut args_iter = args.iter().skip(1);
 
         while let Some(arg) = args_iter.next() {
             match arg.as_str() {
-                "-s" | "--size" => {
-                    config.size = parse_arg(&mut args_iter, "size")?;
-                }
-                "-d" | "--density" => {
-                    config.density = parse_arg(&mut args_iter, "density")?;
-                    if !(0.0..=1.0).contains(&config.density) {
-                        return Err("Density must be between 0.0 and 1.0".into());
-                    }
+                "-g" | "--game-mode" => {
+                    let mode = parse_arg::<String>(&mut args_iter, "game_mode")?;
+                    config.game_mode = match mode.to_lowercase().as_str() {
+                        "normal" | "n" => GameMode::Normal,
+                        "extended" | "e" => GameMode::Extended,
+                        _ => return Err("Invalid game mode use 'normal' or 'extended' or 'n' or 'e' ".into()),
+                    };
                 }
                 "-c" | "--simulations" => {
                     config.simulations = parse_arg(&mut args_iter, "simulations")?;
                 }
-                "-b" | "--burn-pattern" => {
-                    let pattern = parse_arg::<String>(&mut args_iter, "burn-pattern")?;
-                    config.burn_pattern = match pattern.to_lowercase().as_str() {
-                        "moore" => BurnPattern::Moore(MooreNeighborhood),
-                        "vonneumann" => BurnPattern::VonNeumann(VonNeumannNeighborhood),
-                        _ => return Err("Invalid burn pattern. Use 'moore' or 'vonneumann'".into()),
+                "-o" | "--output-file" => {
+                    config.output_file = Some(parse_arg(&mut args_iter, "output_file")?);
+                }
+                // not sure but we could merge sa and sb
+                "-a" | "--player-a" | "--player-a-strategy" => {
+                    let strategy = parse_arg::<String>(&mut args_iter, "strategy_player_a")?;
+                    config.strategy_player_a = match strategy.to_lowercase().as_str() {
+                        "greedy" | "g" => PlayerStrategy::Greedy(GreedyStrategy),
+                        // "basic" | "b" => PlayerStrategy::Basic,
+                        _ => return Err("Invalid player strategy use 'greedy' or 'g' or 'basic' or 'b' ".into()),
                     };
                 }
-                "-g" | "--display-grid" => {
-                    config.display_grid = true;
+                "-b" | "--player-b" | "--player-b-strategy" => {
+                    let strategy = parse_arg::<String>(&mut args_iter, "strategy_player_b")?;
+                    config.strategy_player_b = match strategy.to_lowercase().as_str() {
+                        "greedy" | "g" => PlayerStrategy::Greedy(GreedyStrategy),
+                        // "basic" | "b" => PlayerStrategy::Basic,
+                        _ => return Err("Invalid player strategy use 'greedy' or 'g' or 'basic' or 'b' ".into()),
+                    };
+                }
+                "-d" | "--dice-mode" => {
+                    let mode = parse_arg::<String>(&mut args_iter, "dice_mode")?;
+                    config.dice_mode = match mode.to_lowercase().as_str() {
+                        "normal" | "n" => DiceMode::Normal,
+                        "weighted" | "w" => DiceMode::Weighted,
+                        _ => return Err("Invalid dice mode use 'normal' or 'n' or 'weighted' or 'w' ".into()),
+                    };
+                }
+                "-p" | "--parallelization" => { // idk if there is a community standard for saying if sb wants to do paral.. process
+                    config.parallelization = true;
                 }
                 _ => return Err(format!("Unknown argument: {}", arg)),
             }
@@ -75,50 +130,3 @@ fn parse_arg<T: std::str::FromStr>(
         .map_err(|_| format!("Invalid value for {}", arg_name))
 }
 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn mock_args(args: &[&str]) -> Vec<String> {
-        std::iter::once("program_name".to_string())
-            .chain(args.iter().map(|s| s.to_string()))
-            .collect()
-    }
-
-    #[test]
-    fn test_default_config() {
-        let args = mock_args(&[]);
-        let config = Config::new(&args).unwrap();
-        assert_eq!(config.size, 50);
-        assert_eq!(config.density, 0.6);
-        assert_eq!(config.simulations, 100);
-        assert!(matches!(config.burn_pattern, BurnPattern::Moore(MooreNeighborhood)));
-        assert!(!config.display_grid);
-    }
-
-    #[test]
-    fn test_full_config() {
-        let args = mock_args(&[
-            "-s", "100",
-            "-d", "0.7",
-            "-c", "500",
-            "-b", "vonneumann",
-            "-g"
-        ]);
-        let config = Config::new(&args).unwrap();
-
-        assert_eq!(config.size, 100);
-        assert!((config.density - 0.7).abs() < f64::EPSILON);
-        assert_eq!(config.simulations, 500);
-        assert!(matches!(config.burn_pattern, BurnPattern::VonNeumann(VonNeumannNeighborhood)));
-        assert!(config.display_grid);
-    }
-
-    #[test]
-    fn test_invalid_density() {
-        let args = mock_args(&["-d", "1.5"]);
-        let result = Config::new(&args);
-        assert!(result.is_err());
-    }
-}
