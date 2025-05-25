@@ -1,64 +1,58 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use super::BitFlipStrategy;
+use super::common::RAW_COMBINATIONS;
+
 use crate::board::Board;
 
+
+// change to make mask not vec<u8>
+// no heap allocations
 lazy_static! {
-    static ref COMBINATIONS: HashMap<u8, Vec<Vec<u8>>> = {
-        let mut map = HashMap::new();
+    // Strategy-specific sorted combinations
+    static ref GREEDY_COMBINATIONS: HashMap<u8, Vec<Vec<u8>>> = {
+        let mut m = HashMap::new();
         for sum in 2..=12 {
-            let mut combinations = generate_combinations(sum);
-            combinations.sort_by(|a, b| {
-                b.len().cmp(&a.len()).then_with(||
-                    b.iter().sum::<u8>().cmp(&a.iter().sum::<u8>())
-                )
-            });
-            map.insert(sum, combinations);
+            if let Some(raw) = (&*RAW_COMBINATIONS).get(&sum) {
+                let mut sorted = raw.clone();
+                sorted.sort_by(|a, b| {
+                    b.len().cmp(&a.len())
+                        .then_with(|| b.iter().sum::<u8>().cmp(&a.iter().sum::<u8>()))
+                });
+                m.insert(sum, sorted);
+            }
         }
-        map
+        m
+    };
+
+    // Masks derived from sorted combinations
+    static ref GREEDY_MASKS: HashMap<u8, Vec<u16>> = {
+        (&*GREEDY_COMBINATIONS)
+            .iter()
+            .map(|(&sum, combos)| {
+                let masks = combos
+                    .iter()
+                    .map(|combo| combo_to_mask(combo))
+                    .collect();
+                (sum, masks)
+            })
+            .collect()
     };
 }
 
-fn generate_combinations(target: u8) -> Vec<Vec<u8>> {
-    let mut results = Vec::new();
-    let mut current = Vec::new();
-    generate_combinations_recursive(target, &mut current, target.min(12), &mut results);
-    results
+fn combo_to_mask(combo: &[u8]) -> u16 {
+    combo.iter().fold(0, |acc, &lever| acc | (1 << (lever - 1)))
 }
 
-fn generate_combinations_recursive(target: u8, current: &mut Vec<u8>, start: u8, results: &mut Vec<Vec<u8>>) {
-    if target == 0 {
-        results.push(current.clone());
-        return;
-    }
-    if start == 0 {
-        return;
-    }
-    let start = start.min(target);
-    for i in (1..=start).rev() {
-        current.push(i);
-        generate_combinations_recursive(target - i, current, i - 1, results);
-        current.pop();
-    }
-}
 #[derive(Clone)]
 pub struct GreedyStrategy;
 
 impl BitFlipStrategy for GreedyStrategy {
-    fn choose_levers_to_flip(&self, board: &Board, sum: u8) -> Option<Vec<u8>> {
-        /* The problem you’re running into is that COMBINATIONS—as declared by lazy_static!
-         * - is not itself a HashMap<…>, but a wrapper type (Lazy<HashMap<…>>) that deref-coerces to your map.
-         * In almost every context Rust will insert the deref for you, but for some reason in your setup it isn’t,
-         * so COMBINATIONS.get(…) is trying to call get on the Lazy<…> wrapper, not the inner HashMap.
-         */
-        // let combinations = COMBINATIONS.get(&sum)?; //
-        let combinations = (&*COMBINATIONS).get(&sum)?; // or let combinations = (*COMBINATIONS).get(&sum)?;
-        for combination in combinations {
-            if combination.iter().all(|&lever| board.is_up(lever)) {
-                return Some(combination.clone());
-            }
-        }
-        None
+
+    fn choose_flip_mask(&self, board: &Board, sum: u8) -> Option<u16> {
+        (&*GREEDY_MASKS).get(&sum).and_then(|masks| {
+            masks.iter().find(|&&mask| (board.0 & mask) == mask).copied()
+        })
     }
 
     fn name(&self) -> &'static str { "Greedy Strategy" }
