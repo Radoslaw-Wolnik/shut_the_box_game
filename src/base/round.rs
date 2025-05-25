@@ -9,9 +9,10 @@ pub fn perform_round(
 ) -> u16 {
     let mut board = Board::new();
     loop {
-        let TurnResult { new_board, success } =
-            perform_turn(board, throw_dice, strategy);
-        board = new_board;
-        if !success { break board.sum_unflipped() }
+        if let Some(flip) = perform_turn(board, throw_dice, strategy) {
+            board = board ^ flip;
+        } else {
+            break board.sum_unflipped();
+        }
     }
 }

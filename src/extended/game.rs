@@ -1,7 +1,7 @@
 use crate::board::Board;
 use crate::config::{DiceMode, PlayerStrategy};
 use crate::dice_throw::{throw_normal, throw_weighted};
-use crate::extended::turn::{process_player_a_turn, process_player_b_turn};
+use crate::extended::turn::perform_turn;
 use crate::extended::{CriticalMoment, ExtendedGameResult, GameResult, ThrowFn};
 
 pub struct Game<'a> {
@@ -36,27 +36,19 @@ impl<'a> Game<'a> {
             turns += 1;
 
             // Player A's turn
-            let (new_board, _) = process_player_a_turn(
-                board,
-                self.player_a_strategy,
-                self.throw_dice,
-            );
-            board = new_board;
-
-            if let Some(all_down) = self.check_game_end(turns, &board) {
-                return all_down;
+            if let Some(flip) = perform_turn(board, self.throw_dice, self.player_a_strategy) {
+                board = board ^ flip;
+                if let Some(game_result) = self.check_game_end(turns, &board) {
+                    return game_result;
+                }
             }
 
             // Player B's turn
-            let (new_board, _) = process_player_b_turn(
-                board,
-                self.player_b_strategy,
-                self.throw_dice,
-            );
-            board = new_board;
-
-            if let Some(all_down) = self.check_game_end(turns, &board) {
-                return all_down;
+            if let Some(flip) = perform_turn(!board, self.throw_dice, self.player_b_strategy) {
+                board = board ^ flip;
+                if let Some(game_result) = self.check_game_end(turns, &board) {
+                    return game_result;
+                }
             }
 
             if turns >= 100 {

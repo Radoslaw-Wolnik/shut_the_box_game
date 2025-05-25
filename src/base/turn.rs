@@ -12,14 +12,7 @@ pub fn perform_turn(
     board: Board,
     throw_dice: ThrowFn,
     strategy: &PlayerStrategy // directly using the enum
-) -> TurnResult {
+) -> Option<u16> {
     let sum = throw_dice();
-    match strategy.choose_levers_to_flip(&board, sum) {
-        Some(levers) => {
-            let mut new_board = board;
-            new_board.flip_down_multiple(&levers);
-            TurnResult { new_board, success: true }
-        },
-        None => TurnResult { new_board: board, success: false }
-    }
+    strategy.choose_flip_mask(&board, sum)
 }
