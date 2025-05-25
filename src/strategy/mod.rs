@@ -1,5 +1,8 @@
 pub mod greedy;
-// pub mod basic
+pub mod dummy;
+pub mod pair_descending;
+pub mod avoid_low_bits;
+pub mod common;
 
 use crate::board::Board;
 

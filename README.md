@@ -3,6 +3,7 @@
 This Rust project simulates a probability-based board game involving 12 levers and dice rolls. Players aim to minimize their score by strategically flipping levers down over 5 rounds.
 
 ## Game Rules
+### base mode:
 - **Board**: 12 levers (numbered 1–12), initially all **up**.
 - **Rounds**: Each player completes 5 rounds. The lowest total score wins.
 - **Turn**:
@@ -12,6 +13,15 @@ This Rust project simulates a probability-based board game involving 12 levers a
      - Multiple levers whose numbers sum to the dice value.
   3. Repeat until no valid moves remain.
 - **Scoring**: Sum of **unflipped** lever numbers after each round.
+
+### extended mode:
+- **Board**: 12 levers (numbered 1–12), initially all **up**.
+- **Turn**: (first player flips down, second up)
+  1. Roll two 6-sided dice and sum the result.
+  2. Flip lever(s) matching the dice sum:
+      - Single lever with the exact number, **or**
+      - Multiple levers whose numbers sum to the dice value.
+- **End**: When all levers on the board are either up or down
 
 ---
 

@@ -8,6 +8,7 @@ mod extended;
 use std::env;
 use std::path::Path;
 use std::time::Instant;
+use crate::board::Board;
 use crate::config::{Config, GameMode};
 use crate::strategy::BitFlipStrategy;
 
@@ -53,7 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // no implemented err
         }
     }
-
+    let max_score = 12 + 11 + 10 + 9 + 8 + 7 + 6 + 5 + 4 + 3 + 2 + 1;
+    println!("Max score per round: {} and per game {}", max_score, max_score * 5); // avg 269/5 - 53 per round
     Ok(())
 }
 

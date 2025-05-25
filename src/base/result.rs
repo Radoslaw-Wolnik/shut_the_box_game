@@ -41,9 +41,10 @@ impl GameStatistics {
         self.total_score += (a + b) as f64;
         self.min_score = self.min_score.min(a.min(b) as f64);
         self.max_score = self.max_score.max(a.max(b) as f64);
-        if a > b {
+        // wins the player with lower score
+        if a < b {
             self.wins_a += 1;
-        } else if b > a {
+        } else if b < a {
             self.wins_b += 1;
         }
     }
@@ -60,7 +61,7 @@ impl GameStatistics {
         println!("\nStatistics:");
         println!("Min score: {}", self.min_score);
         println!("Max score: {}", self.max_score);
-        println!("Avg total: {:.2}", self.average(simulations));
+        println!("Avg Total per player: {:.2} and per turn {:.2}", self.average(simulations), self.average(simulations )/5.0);
         println!("Wins A: {} | Wins B: {}", self.wins_a, self.wins_b);
     }
 }
