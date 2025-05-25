@@ -1,6 +1,9 @@
 use crate::board::Board;
 use crate::strategy::BitFlipStrategy;
 use crate::strategy::greedy::GreedyStrategy;
+use crate::strategy::avoid_low_bits::AvoidLowBitsStrategy;
+use crate::strategy::dummy::DummyHighestStrategy;
+use crate::strategy::pair_descending::PairDescendingStrategy;
 // use std::env;
 
 #[derive(Debug)]
@@ -11,28 +14,38 @@ pub enum GameMode {
 
 pub enum PlayerStrategy {
     Greedy(GreedyStrategy),
-    // Basic(BasicStrategy),
+    AvoidLowBits(AvoidLowBitsStrategy),
+    Pair(PairDescendingStrategy),
+    Dummy(DummyHighestStrategy)
 }
 
 
 // Implement BitFlipStrategy for the configuration enum
 impl BitFlipStrategy for PlayerStrategy {
-    fn choose_levers_to_flip(&self, board: &Board, sum: u8) -> Option<Vec<u8>> {
+    fn choose_flip_mask(&self, board: &Board, sum: u8) -> Option<u16> {
         match self {
-            Self::Greedy(s) => s.choose_levers_to_flip(board, sum),
-            // Self::Basic(s) => s.choose_levers_to_flip(board, sum),
+            Self::Greedy(s) => s.choose_flip_mask(board, sum),
+            Self::AvoidLowBits(s) => s.choose_flip_mask(board, sum),
+            Self::Pair(s) => s.choose_flip_mask(board, sum),
+            Self::Dummy(s) => s.choose_flip_mask(board, sum)
         }
     }
 
     fn name(&self) -> &'static str {
         match self {
-            PlayerStrategy::Greedy(s) => s.name()
+            PlayerStrategy::Greedy(s) => s.name(),
+            PlayerStrategy::AvoidLowBits(s) => s.name(),
+            PlayerStrategy::Pair(s) => s.name(),
+            PlayerStrategy::Dummy(s) => s.name(),
         }
     }
 
     fn description(&self) -> &'static str {
         match self {
-            PlayerStrategy::Greedy(s) => s.description()
+            PlayerStrategy::Greedy(s) => s.description(),
+            PlayerStrategy::AvoidLowBits(s) => s.description(),
+            PlayerStrategy::Pair(s) => s.description(),
+            PlayerStrategy::Dummy(s) => s.description(),
         }
     }
 }
@@ -60,8 +73,8 @@ impl Config {
             game_mode: GameMode::Normal,
             simulations: 100,
             output_file: None,
-            strategy_player_a: PlayerStrategy::Greedy(GreedyStrategy),
-            strategy_player_b: PlayerStrategy::Greedy(GreedyStrategy),
+            strategy_player_a: PlayerStrategy::AvoidLowBits(AvoidLowBitsStrategy),
+            strategy_player_b: PlayerStrategy::Pair(PairDescendingStrategy),
             dice_mode: DiceMode::Normal,
             parallelization: false,
         };
@@ -89,7 +102,9 @@ impl Config {
                     let strategy = parse_arg::<String>(&mut args_iter, "strategy_player_a")?;
                     config.strategy_player_a = match strategy.to_lowercase().as_str() {
                         "greedy" | "g" => PlayerStrategy::Greedy(GreedyStrategy),
-                        // "basic" | "b" => PlayerStrategy::Basic,
+                        "avoid_low" | "al" => PlayerStrategy::AvoidLowBits(AvoidLowBitsStrategy),
+                        "pair_descending" | "pd" => PlayerStrategy::Pair(PairDescendingStrategy),
+                        "dummy" => PlayerStrategy::Dummy(DummyHighestStrategy),
                         _ => return Err("Invalid player strategy use 'greedy' or 'g' or 'basic' or 'b' ".into()),
                     };
                 }
@@ -97,7 +112,9 @@ impl Config {
                     let strategy = parse_arg::<String>(&mut args_iter, "strategy_player_b")?;
                     config.strategy_player_b = match strategy.to_lowercase().as_str() {
                         "greedy" | "g" => PlayerStrategy::Greedy(GreedyStrategy),
-                        // "basic" | "b" => PlayerStrategy::Basic,
+                        "avoid_low" | "al" => PlayerStrategy::AvoidLowBits(AvoidLowBitsStrategy),
+                        "pair_descending" | "pd" => PlayerStrategy::Pair(PairDescendingStrategy),
+                        "dummy" => PlayerStrategy::Dummy(DummyHighestStrategy),
                         _ => return Err("Invalid player strategy use 'greedy' or 'g' or 'basic' or 'b' ".into()),
                     };
                 }
