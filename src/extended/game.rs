@@ -1,3 +1,4 @@
+use std::ops::BitXor;
 use crate::board::Board;
 use crate::config::{DiceMode, PlayerStrategy};
 use crate::dice_throw::{throw_normal, throw_weighted};
@@ -57,65 +58,6 @@ impl<'a> Game<'a> {
         }
     }
 
-    pub fn play_verbose(&mut self, simulation_id: u32) -> ExtendedGameResult {
-        let mut turns = 0;
-        let mut board = Board::new();
-        let mut critical_moments = Vec::new();
-
-        loop {
-            turns += 1;
-            let mut round_ended = false; // unused
-
-            // Process Player A
-            let (new_board, critical) = process_player_a_turn(
-                board,
-                self.player_a_strategy,
-                self.throw_dice,
-            );
-            board = new_board;
-            self.process_critical_moment(&mut critical_moments, critical, turns);
-
-            if let Some((result, final_board)) = self.check_verbose_end(turns, &board) {
-                return ExtendedGameResult {
-                    simulation_id,
-                    turns,
-                    winner: result,
-                    final_board,
-                    critical_moments,
-                };
-            }
-
-            // Process Player B
-            let (new_board, critical) = process_player_b_turn(
-                board,
-                self.player_b_strategy,
-                self.throw_dice,
-            );
-            board = new_board;
-            self.process_critical_moment(&mut critical_moments, critical, turns);
-
-            if let Some((result, final_board)) = self.check_verbose_end(turns, &board) {
-                return ExtendedGameResult {
-                    simulation_id,
-                    turns,
-                    winner: result,
-                    final_board,
-                    critical_moments,
-                };
-            }
-
-            if turns >= 100 {
-                return ExtendedGameResult {
-                    simulation_id,
-                    turns,
-                    winner: GameResult::Tie(turns),
-                    final_board: board.to_bin_string(),
-                    critical_moments,
-                };
-            }
-        }
-    }
-
     // Helper methods
     fn check_game_end(&self, turns: u8, board: &Board) -> Option<GameResult> {
         board.all_same().map(|all_down| {
@@ -127,26 +69,4 @@ impl<'a> Game<'a> {
         })
     }
 
-    fn check_verbose_end(&self, turns: u8, board: &Board) -> Option<(GameResult, String)> {
-        board.all_same().map(|all_down| {
-            let result = if all_down {
-                GameResult::Player1Wins(turns)
-            } else {
-                GameResult::Player2Wins(turns)
-            };
-            (result, board.to_bin_string())
-        })
-    }
-
-    fn process_critical_moment(
-        &self,
-        moments: &mut Vec<CriticalMoment>,
-        critical: Option<CriticalMoment>,
-        turn: u8,
-    ) {
-        if let Some(mut cm) = critical {
-            cm.turn = turn;
-            moments.push(cm);
-        }
-    }
 }
