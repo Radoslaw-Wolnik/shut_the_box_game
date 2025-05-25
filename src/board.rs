@@ -79,3 +79,102 @@ impl BitXor<u16> for Board {
         Board((self.0 ^ (rhs & VALID_MASK)) & VALID_MASK)
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_board_has_all_levers_up() {
+        let board = Board::new();
+        assert_eq!(board.0, 0b1111_1111_1111);
+        assert!(board.all_same() == Some(false));
+    }
+
+    #[test]
+    fn is_up_checks_correct_bits() {
+        let board = Board(0b1010_1010_1010);
+        assert!(board.is_up(2));
+        assert!(!board.is_up(1));
+        assert!(board.is_up(4));
+        assert!(!board.is_up(3));
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed: (1..=12).contains(&lever)")]
+    fn is_up_panics_on_invalid_lever() {
+        let board = Board::new();
+        let _ = board.is_up(13);
+    }
+
+    #[test]
+    fn flip_levers_toggles_correct_bits() {
+        let mut board = Board::new();
+        // Flip levers 3 and 5
+        board.flip_levers(&[3, 5]);
+        assert_eq!(board.0, 0b1111_1110_1011);
+        // Flip again to restore
+        board.flip_levers(&[3, 5]);
+        assert_eq!(board.0, 0b1111_1111_1111);
+    }
+
+    #[test]
+    fn sum_unflipped_calculates_correctly() {
+        let mut board = Board::new();
+        assert_eq!(board.sum_unflipped(), 78); // 1+2+...+12 = 78
+
+        board.flip_levers(&[12]);
+        assert_eq!(board.sum_unflipped(), 78 - 12);
+
+        board.flip_levers(&[1, 2, 3]);
+        assert_eq!(board.sum_unflipped(), 78 - 12 - 1 - 2 - 3);
+    }
+
+    #[test]
+    fn all_same_detection() {
+        let full = Board::new();
+        assert_eq!(full.all_same(), Some(false));
+
+        let empty = Board(0);
+        assert_eq!(empty.all_same(), Some(true));
+
+        let mixed = Board(0b0000_0000_0001);
+        assert_eq!(mixed.all_same(), None);
+    }
+
+    #[test]
+    fn bitwise_operations() {
+        // Test NOT
+        let full = Board::new();
+        assert_eq!(!full, Board(0));
+        assert_eq!(!!full, full);
+
+        // Test XOR with Board
+        let a = Board(0b1111_0000_1111);
+        let b = Board(0b1010_1010_1010);
+        assert_eq!(a ^ b, Board(0b0101_1010_0101));
+
+        // Test XOR with u16
+        let board = Board::new();
+        assert_eq!(board ^ 0b0000_0000_0001, Board(0b1111_1111_1110));
+    }
+
+    #[test]
+    fn formatting() {
+        let board = Board::new();
+        assert_eq!(board.to_hex(), "fff");
+        assert_eq!(board.to_bin_string(), "111111111111");
+
+        let custom = Board(0b1010_0101_1100);
+        assert_eq!(custom.to_hex(), "a5c");
+        assert_eq!(custom.to_bin_string(), "101001011100");
+    }
+
+    #[test]
+    fn mask_handling() {
+        // Test that higher bits are masked off
+        let board = Board::new() ^ 0b1111_0000_0000_0000;
+        assert_eq!(board.0, 0b0000_1111_1111_1111);
+    }
+}

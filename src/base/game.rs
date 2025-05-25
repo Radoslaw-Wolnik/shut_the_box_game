@@ -45,3 +45,59 @@ impl<'a> Game<'a> {
         (a, b)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{DiceMode, PlayerStrategy};
+    use crate::strategy::dummy::DummyHighestStrategy;
+
+    // Fixed dice throw for testing
+    fn fixed_throw() -> u8 {
+        7 // Always return 7 for predictable tests
+    }
+
+    #[test]
+    fn test_game_play() {
+        let game = Game::new(
+            &DiceMode::Normal,
+            &PlayerStrategy::Dummy(DummyHighestStrategy),
+            &PlayerStrategy::Dummy(DummyHighestStrategy),
+        );
+
+        // Replace throw function with fixed throw
+        let game = Game {
+            throw_dice: fixed_throw,
+            ..game
+        };
+
+        let (a, b) = game.play();
+
+        // Each player plays 5 rounds, each round scores 71
+        assert_eq!(a, 71 * 5);
+        assert_eq!(b, 71 * 5);
+    }
+
+    #[test]
+    fn test_game_verbose_output() {
+        let game = Game::new(
+            &DiceMode::Normal,
+            &PlayerStrategy::Dummy(DummyHighestStrategy),
+            &PlayerStrategy::Dummy(DummyHighestStrategy),
+        ).with_throw(fixed_throw);
+
+        let result = game.play_verbose(1);
+
+        assert_eq!(result.simulation_id, 1);
+        assert_eq!(result.player_a, [71; 5]);
+        assert_eq!(result.player_b, [71; 5]);
+    }
+
+    // Helper method to override throw function
+    impl<'a> Game<'a> {
+        fn with_throw(mut self, throw: ThrowFn) -> Self {
+            self.throw_dice = throw;
+            self
+        }
+    }
+}
