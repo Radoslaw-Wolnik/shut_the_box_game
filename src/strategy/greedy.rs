@@ -66,13 +66,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_combinations_for_7() {
-        // let combinations = COMBINATIONS.get(&7).unwrap();
-        let combinations = (*COMBINATIONS).get(&7).unwrap();
-        assert!(combinations.contains(&vec![7]));
-        assert!(combinations.contains(&vec![6, 1]));
-        assert!(combinations.contains(&vec![5, 2]));
-        assert!(combinations.contains(&vec![4, 3]));
-        assert!(combinations.contains(&vec![4, 2, 1]));
+    fn test_choose_flip_mask_full_board() {
+        let strat = GreedyStrategy;
+        let board = Board::new(); // all 12 up
+        // Greedy will pick [6,3,2,1] for sum=12 (longest combo), mask = 39
+        let mask = strat.choose_flip_mask(&board, 12).unwrap();
+        assert_eq!(mask, 39);
     }
+
+    #[test]
+    fn test_choose_flip_mask_partial_board() {
+        let strat = GreedyStrategy;
+        // take lever 6 down
+        let mut board = Board::new();
+        board = board ^ (1 << (6 - 1));
+
+        // sum=12: now [6,3,2,1] is impossible, next-longest is [5,4,2,1]
+        // mask = (1<<4)|(1<<3)|(1<<2) = 28
+        let mask = strat.choose_flip_mask(&board, 12).unwrap();
+        assert_eq!(mask, (1<<4)|(1<<3)|(1<<1)|(1<<0));
+    }
+
+    #[test]
+    fn test_combinations_masks_cover() {
+        let combos = (&*GREEDY_COMBINATIONS).get(&7).unwrap();
+        let masks  = (&*GREEDY_MASKS).get(&7).unwrap();
+        // same length
+        assert_eq!(combos.len(), masks.len());
+        // every combo’s mask should appear
+        let computed_masks: Vec<u16> = combos.iter()
+            .map(|combo| {
+                combo.iter().fold(0u16, |acc, &lever| acc | (1 << (lever - 1)))
+            })
+            .collect();
+        for m in computed_masks {
+            assert!(masks.contains(&m));
+        }
+    }
+
 }
