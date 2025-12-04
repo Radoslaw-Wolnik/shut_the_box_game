@@ -70,7 +70,7 @@ This Rust project simulates a probability-based board game involving 12 levers a
 ### Steps
 1. **Clone the Project**:
    ```bash
-   git clone https://github.com/your-username/game-simulation.git
+   git clone https://github.com/Radoslaw-Wolnik/shut_the_box_game.git
    cd game-simulation
    ```
 
@@ -120,5 +120,4 @@ This Rust project simulates a probability-based board game involving 12 levers a
 
 ## Future Improvements
 - **Alternative Strategies**: Implement probabilistic or DFS-based approaches.
-- **Benchmarking**: Compare performance of bitmask vs. alternative data structures.
 - **Parallelization**: Use `rayon` to parallelize simulations.
