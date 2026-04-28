@@ -30,7 +30,7 @@ impl<'a> Game<'a> {
     }
 
     pub fn play(&mut self) -> GameResult {
-        let mut turns = 0;
+        let mut turns: u16 = 0;
         let mut board = Board::new();
 
         loop {
@@ -52,14 +52,14 @@ impl<'a> Game<'a> {
                 }
             }
 
-            if turns >= 100 {
+            if turns >= 10_000 {
                 return GameResult::Tie(turns);
             }
         }
     }
 
     // Helper methods
-    fn check_game_end(&self, turns: u8, board: &Board) -> Option<GameResult> {
+    fn check_game_end(&self, turns: u16, board: &Board) -> Option<GameResult> {
         board.all_same().map(|all_down| {
             if all_down {
                 GameResult::Player1Wins(turns)

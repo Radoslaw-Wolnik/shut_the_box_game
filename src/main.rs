@@ -37,6 +37,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let elapsed = start.elapsed();
                 stats.print(config.simulations as u32);
                 println!("Elapsed: {:.2?}", elapsed);
+
+                let max_score = 12 + 11 + 10 + 9 + 8 + 7 + 6 + 5 + 4 + 3 + 2 + 1;
+                println!("Max score per round: {} and per game {}", max_score, max_score * 5); // avg 269/5 - 53 per round
+
             } else {
                 // record verbose data
                 // Determine output path
@@ -51,11 +55,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         GameMode::Extended => {
-            // no implemented err
+            let mut game = extended::game::Game::new(&config.dice_mode, strategy_a, strategy_b);
+
+            if config.output_file.is_none(){
+                // not saving data to file
+                let start = Instant::now();
+
+                for i in 0..config.simulations as u32 {
+                    let result = game.play();
+                    println!("{:?}", result);
+                }
+
+                let elapsed = start.elapsed();
+                println!("Elapsed: {:.2?}", elapsed);
+            } else {
+                // saving data to file
+
+            }
         }
     }
-    let max_score = 12 + 11 + 10 + 9 + 8 + 7 + 6 + 5 + 4 + 3 + 2 + 1;
-    println!("Max score per round: {} and per game {}", max_score, max_score * 5); // avg 269/5 - 53 per round
+
     Ok(())
 }
 

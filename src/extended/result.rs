@@ -16,7 +16,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize)]
 pub struct ExtendedGameResult {
     pub simulation_id: u32,
-    pub turns: u8,
+    pub turns: u16,
     pub winner: GameResult,
     pub final_board: String,
     pub critical_moments: Vec<CriticalMoment>,
@@ -24,16 +24,16 @@ pub struct ExtendedGameResult {
 
 #[derive(Serialize, Deserialize)]
 pub struct CriticalMoment {
-    pub turn: u8,
+    pub turn: u16,
     pub board: String,
     pub active_player: u8,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum GameResult {
-    Player1Wins(u8),
-    Player2Wins(u8),
-    Tie(u8),
+    Player1Wins(u16),
+    Player2Wins(u16),
+    Tie(u16),
 }
 impl ExtendedGameResult {
     pub fn to_json(&self) -> String {
